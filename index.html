@@ -1,15 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FreshTrack AI - 智能食物管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FreshTrack AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src='https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js'></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; }
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
         .card-expired { border-left: 5px solid #ef4444; }
         .card-warning { border-left: 5px solid #f59e0b; }
         .card-safe { border-left: 5px solid #10b981; }
@@ -18,193 +17,156 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-    <!-- Header -->
     <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
         <div class="max-w-md mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <span>🥗</span> FreshTrack AI
-            </h1>
-            <div class="flex gap-3">
-                <button onclick="exportData()" title="備份資料" class="text-white hover:opacity-80 text-lg">📥</button>
-                <button onclick="document.getElementById('importInput').click()" title="還原資料" class="text-white hover:opacity-80 text-lg">📤</button>
+            <h1 class="text-xl font-bold">🥗 FreshTrack AI</h1>
+            <div class="flex gap-4">
+                <button onclick="exportData()" class="text-xl">📥</button>
+                <button onclick="document.getElementById('importInput').click()" class="text-xl">📤</button>
                 <input type="file" id="importInput" class="hidden" accept=".json" onchange="importData(this)">
             </div>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 pb-24">
-        <!-- Add Item Section -->
         <section class="bg-white rounded-2xl shadow-sm p-5 mb-6">
-            <h2 class="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                <span class="text-emerald-500">➕</span> 新增食物項目
-            </h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">食物名稱</label>
-                    <input type="text" id="foodName" placeholder="例如：全脂牛奶" class="w-full border-gray-200 border rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 outline-none transition">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">存放位置</label>
-                        <select id="foodCategory" class="w-full border-gray-200 border rounded-xl p-3 bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
-                            <option value="冷藏">❄️ 冷藏</option>
-                            <option value="冷凍">🧊 冷凍</option>
-                            <option value="常溫">🏠 常溫</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">到期日期</label>
-                        <input type="date" id="expiryDate" class="w-full border-gray-200 border rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 outline-none">
-                    </div>
+            <div class="flex gap-4 mb-6">
+                <div onclick="document.getElementById('productCam').click()" class="w-24 h-24 bg-gray-100 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden shrink-0 relative">
+                    <span id="prodHint" class="text-[10px] text-gray-400 text-center">拍攝<br>產品外觀</span>
+                    <img id="productPreview" class="hidden w-full h-full object-cover">
+                    <input type="file" id="productCam" accept="image/*" capture="environment" class="hidden" onchange="handleProductPhoto(this)">
                 </div>
 
-                <div class="flex gap-2">
-                    <button onclick="document.getElementById('cameraInput').click()" class="flex-1 bg-blue-50 text-blue-600 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 border border-blue-100 hover:bg-blue-100 transition">
-                        📷 AI 掃描標籤
+                <div class="flex-1 space-y-3">
+                    <input type="text" id="foodName" placeholder="食物名稱 (選填)" class="w-full border-gray-200 border rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50">
+                    
+                    <button onclick="document.getElementById('expiryCam').click()" class="w-full bg-blue-50 text-blue-600 font-semibold py-2 rounded-xl flex items-center justify-center gap-2 border border-blue-100 text-xs">
+                        🔍 掃描日期標籤
                     </button>
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="processImage(this)">
+                    <input type="file" id="expiryCam" accept="image/*" capture="environment" class="hidden" onchange="processExpiryAI(this)">
                 </div>
-
-                <div id="status" class="text-center text-sm font-medium text-blue-600 hidden animate-pulse bg-blue-50 py-2 rounded-lg">
-                    🤖 AI 正在辨識日期...
-                </div>
-                
-                <button onclick="addItem()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition transform active:scale-95">
-                    儲存至清單
-                </button>
             </div>
+
+            <div id="status" class="text-center text-xs font-medium text-blue-600 hidden bg-blue-50 py-2 rounded-lg mb-4 animate-pulse">
+                🤖 AI 正在辨識日期...
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 mb-1 ml-1">存放位置</label>
+                    <select id="foodCategory" class="w-full border-gray-200 border rounded-xl p-2.5 bg-gray-50 text-sm outline-none">
+                        <option value="冷藏">❄️ 冷藏</option>
+                        <option value="冷凍">🧊 冷凍</option>
+                        <option value="常溫">🏠 常溫</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 mb-1 ml-1">到期日期</label>
+                    <input type="date" id="expiryDate" class="w-full border-gray-200 border rounded-xl p-2.5 bg-gray-50 text-sm outline-none">
+                </div>
+            </div>
+
+            <button onclick="addItem()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition">儲存項目</button>
         </section>
 
-        <!-- Tabs / Filter -->
-        <div class="flex border-b border-gray-200 mb-4 overflow-x-auto no-scrollbar">
-            <button onclick="setFilter('全部')" id="tab-全部" class="flex-none px-4 py-2 font-medium tab-active transition">全部</button>
-            <button onclick="setFilter('冷藏')" id="tab-冷藏" class="flex-none px-4 py-2 font-medium text-gray-500 transition">冷藏</button>
-            <button onclick="setFilter('冷凍')" id="tab-冷凍" class="flex-none px-4 py-2 font-medium text-gray-500 transition">冷凍</button>
-            <button onclick="setFilter('常溫')" id="tab-常溫" class="flex-none px-4 py-2 font-medium text-gray-500 transition">常溫</button>
+        <div class="flex border-b border-gray-200 mb-4 bg-white rounded-t-xl">
+            <button onclick="setFilter('全部')" id="tab-全部" class="flex-1 py-3 font-medium tab-active transition text-sm">全部</button>
+            <button onclick="setFilter('冷藏')" id="tab-冷藏" class="flex-1 py-3 font-medium text-gray-400 transition text-sm">冷藏</button>
+            <button onclick="setFilter('冷凍')" id="tab-冷凍" class="flex-1 py-3 font-medium text-gray-400 transition text-sm">冷凍</button>
+            <button onclick="setFilter('常溫')" id="tab-常溫" class="flex-1 py-3 font-medium text-gray-400 transition text-sm">常溫</button>
         </div>
 
-        <!-- Inventory List -->
-        <section>
-            <div class="flex justify-between items-center mb-4 px-1">
-                <h2 class="font-bold text-gray-700">我的庫存 (<span id="itemCount">0</span>)</h2>
-                <div class="text-xs text-gray-400">點擊垃圾桶刪除項目</div>
-            </div>
-            <div id="foodList" class="space-y-3">
-                <!-- Items injected here -->
-            </div>
-            
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden text-center py-20">
-                <div class="text-5xl mb-4">🍃</div>
-                <p class="text-gray-400">清單空空如也，快去掃描食物吧！</p>
-            </div>
-        </section>
+        <div id="foodList" class="space-y-3"></div>
+        <div id="emptyState" class="hidden text-center py-16 opacity-30 text-gray-400">清單空空如也</div>
     </main>
 
-    <!-- App Scripts -->
+    <canvas id="compressCanvas" class="hidden"></canvas>
+
     <script>
         let inventory = JSON.parse(localStorage.getItem('freshTrackInventory')) || [];
         let currentFilter = '全部';
+        let productBase64 = "";
 
-        // --- AI OCR Logic ---
-        async function processImage(input) {
+        // 處理產品照片 (儲存用)
+        function handleProductPhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.getElementById('compressCanvas');
+                    const ctx = canvas.getContext('2d');
+                    const size = 200;
+                    canvas.width = size;
+                    canvas.height = size;
+                    // 裁切成正方形
+                    const min = Math.min(img.width, img.height);
+                    ctx.drawImage(img, (img.width-min)/2, (img.height-min)/2, min, min, 0, 0, size, size);
+                    productBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                    document.getElementById('productPreview').src = productBase64;
+                    document.getElementById('productPreview').classList.remove('hidden');
+                    document.getElementById('prodHint').classList.add('hidden');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 處理 AI 日期辨識 (僅辨識，不儲存照片)
+        async function processExpiryAI(input) {
             const status = document.getElementById('status');
             const dateInput = document.getElementById('expiryDate');
-            
-            if (input.files && input.files[0]) {
-                status.classList.remove('hidden');
-                status.innerText = "🔍 正在分析包裝標籤...";
+            const file = input.files[0];
+            if (!file) return;
+
+            status.classList.remove('hidden');
+            status.innerText = "🤖 AI 正在讀取日期標籤...";
+
+            try {
+                const worker = await Tesseract.createWorker();
+                await worker.loadLanguage('eng');
+                await worker.initialize('eng');
+                await worker.setParameters({ tessedit_char_whitelist: '0123456789/-. ' });
                 
-                try {
-                    const result = await Tesseract.recognize(input.files[0], 'eng');
-                    const lines = result.data.text.toUpperCase().split('\n');
-                    
-                    let detectedDate = null;
-                    // Regex for YYYY-MM-DD, DD-MM-YYYY, MM/DD/YYYY, etc.
-                    const dateRegex = /(\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})/;
-                    const keywords = ["EXP", "BEST", "USE", "BEFORE", "BB", "SELL", "到期", "效期"];
+                const { data: { text } } = await worker.recognize(file);
+                await worker.terminate();
 
-                    for (let line of lines) {
-                        const hasKeyword = keywords.some(kw => line.includes(kw));
-                        const match = line.match(dateRegex);
-                        
-                        if (match) {
-                            detectedDate = match[0];
-                            if (hasKeyword) break; // High confidence
-                        }
+                const match = text.match(/(\d{2,4}[-/.]\d{1,2}[-/.]\d{1,4})/);
+                if (match) {
+                    const d = new Date(match[0].replace(/[./]/g, '-'));
+                    if (!isNaN(d)) {
+                        dateInput.value = d.toISOString().split('T')[0];
+                        status.innerText = "✅ 日期辨識成功！";
                     }
-                    
-                    if (detectedDate) {
-                        const parsedDate = formatDateForInput(detectedDate);
-                        if (parsedDate) {
-                            dateInput.value = parsedDate;
-                            status.innerText = "✅ 成功辨識日期！";
-                            status.classList.replace('text-blue-600', 'text-green-600');
-                        } else {
-                            status.innerText = "❌ 格式無法解析，請手動輸入。";
-                        }
-                    } else {
-                        status.innerText = "❓ 未能辨識日期，請手動輸入。";
-                    }
-                } catch (e) {
-                    status.innerText = "⚠️ 辨識出錯，請重試。";
+                } else {
+                    status.innerText = "❓ 沒找到日期，請手動輸入";
                 }
-                setTimeout(() => { 
-                    status.classList.add('hidden');
-                    status.classList.replace('text-green-600', 'text-blue-600');
-                }, 3000);
+            } catch (err) {
+                status.innerText = "❌ 辨識失敗";
             }
+            setTimeout(() => status.classList.add('hidden'), 3000);
         }
 
-        function formatDateForInput(dateStr) {
-            // Replaces separator with '-' to help JS Date
-            const cleanStr = dateStr.replace(/[./]/g, '-');
-            const d = new Date(cleanStr);
-            if (isNaN(d)) return '';
-            return d.toISOString().split('T')[0];
-        }
-
-        // --- Inventory Logic ---
         function addItem() {
-            const name = document.getElementById('foodName').value;
+            let name = document.getElementById('foodName').value.trim() || "未命名食物";
             const date = document.getElementById('expiryDate').value;
-            const category = document.getElementById('foodCategory').value;
+            if (!date) return alert("請輸入日期");
 
-            if (!name || !date) {
-                alert("請輸入食物名稱與到期日期");
-                return;
-            }
-
-            const newItem = {
+            inventory.push({
                 id: Date.now(),
                 name,
                 date,
-                category,
-                addedOn: new Date().toISOString()
-            };
-
-            inventory.push(newItem);
-            saveAndRender();
-            
-            document.getElementById('foodName').value = '';
-            document.getElementById('expiryDate').value = '';
-        }
-
-        function deleteItem(id) {
-            inventory = inventory.filter(item => item.id !== id);
-            saveAndRender();
-        }
-
-        function setFilter(filter) {
-            currentFilter = filter;
-            document.querySelectorAll('button[id^="tab-"]').forEach(btn => {
-                btn.classList.remove('tab-active');
-                btn.classList.add('text-gray-500');
+                category: document.getElementById('foodCategory').value,
+                photo: productBase64
             });
-            document.getElementById(`tab-${filter}`).classList.add('tab-active');
-            document.getElementById(`tab-${filter}`).classList.remove('text-gray-500');
-            renderList();
+            
+            productBase64 = "";
+            document.getElementById('foodName').value = "";
+            document.getElementById('expiryDate').value = "";
+            document.getElementById('productPreview').classList.add('hidden');
+            document.getElementById('prodHint').classList.remove('hidden');
+            saveAndRender();
         }
 
         function saveAndRender() {
@@ -215,91 +177,66 @@
 
         function renderList() {
             const list = document.getElementById('foodList');
-            const emptyState = document.getElementById('emptyState');
-            const itemCount = document.getElementById('itemCount');
+            const data = currentFilter === '全部' ? inventory : inventory.filter(i => i.category === currentFilter);
             
-            const filteredData = currentFilter === '全部' 
-                ? inventory 
-                : inventory.filter(item => item.category === currentFilter);
-
             list.innerHTML = '';
-            itemCount.innerText = filteredData.length;
+            document.getElementById('emptyState').classList.toggle('hidden', data.length > 0);
 
-            if (filteredData.length === 0) {
-                emptyState.classList.remove('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                filteredData.forEach(item => {
-                    const diffTime = new Date(item.date) - new Date().setHours(0,0,0,0);
-                    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    let statusClass = 'card-safe';
-                    let textClass = 'text-emerald-600';
-                    let dayText = `剩餘 ${daysLeft} 天`;
-
-                    if (daysLeft < 0) {
-                        statusClass = 'card-expired';
-                        textClass = 'text-red-600 font-bold';
-                        dayText = '已過期';
-                    } else if (daysLeft <= 3) {
-                        statusClass = 'card-warning';
-                        textClass = 'text-amber-600 font-bold';
-                        dayText = `快到期 (剩 ${daysLeft} 天)`;
-                    }
-
-                    list.innerHTML += `
-                        <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center ${statusClass} transition active:scale-[0.98]">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold text-gray-800">\${item.name}</h3>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">\${item.category}</span>
-                                </div>
-                                <p class="text-sm \${textClass}">\${dayText}</p>
-                                <p class="text-[10px] text-gray-400">有效日期: \${item.date}</p>
+            data.forEach(item => {
+                const days = Math.ceil((new Date(item.date) - new Date().setHours(0,0,0,0)) / 86400000);
+                const status = days < 0 ? 'card-expired' : (days <= 3 ? 'card-warning' : 'card-safe');
+                
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3 ${status}">
+                        ${item.photo ? `<img src="${item.photo}" class="w-14 h-14 rounded-lg object-cover border">` : `<div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-xl">🍱</div>`}
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-gray-800 text-sm">${item.name}</h3>
+                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">${item.category}</span>
                             </div>
-                            <button onclick="deleteItem(\${item.id})" class="p-2 text-gray-300 hover:text-red-500 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                            </button>
+                            <p class="text-xs ${days < 0 ? 'text-red-500 font-bold' : (days <= 3 ? 'text-amber-600 font-bold' : 'text-emerald-600')}">
+                                ${days < 0 ? '已過期' : (days === 0 ? '今天到期' : '剩餘 ' + days + ' 天')}
+                            </p>
                         </div>
-                    `;
-                });
+                        <button onclick="deleteItem(${item.id})" class="text-gray-300 p-2">🗑️</button>
+                    </div>`;
+            });
+        }
+
+        function deleteItem(id) {
+            if (confirm("刪除此項目？")) {
+                inventory = inventory.filter(i => i.id !== id);
+                saveAndRender();
             }
         }
 
-        // --- Backup Logic ---
+        function setFilter(f) {
+            currentFilter = f;
+            document.querySelectorAll('button[id^="tab-"]').forEach(b => {
+                b.classList.toggle('tab-active', b.id === 'tab-' + f);
+                b.classList.toggle('text-gray-400', b.id !== 'tab-' + f);
+            });
+            renderList();
+        }
+
         function exportData() {
-            if (inventory.length === 0) return alert("目前沒有資料可以備份。");
-            const dataStr = JSON.stringify(inventory, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            const blob = new Blob([JSON.stringify(inventory)], {type:'application/json'});
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `FreshTrack_Backup_\${new Date().toISOString().split('T')[0]}.json`;
+            a.href = URL.createObjectURL(blob);
+            a.download = `FreshTrack_Backup.json`;
             a.click();
-            URL.revokeObjectURL(url);
         }
 
         function importData(input) {
-            const file = input.files[0];
-            if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (Array.isArray(imported)) {
-                        if (confirm(`確定還原？這將覆蓋現有 \${inventory.length} 筆資料。`)) {
-                            inventory = imported;
-                            saveAndRender();
-                            alert("還原成功！");
-                        }
-                    }
-                } catch (err) { alert("無效的備份檔案。"); }
-                input.value = '';
+            reader.onload = e => { 
+                inventory = JSON.parse(e.target.result); 
+                saveAndRender(); 
+                alert("還原成功"); 
             };
-            reader.readAsText(file);
+            reader.readAsText(input.files[0]);
         }
 
-        // Initial render
         renderList();
     </script>
 </body>
